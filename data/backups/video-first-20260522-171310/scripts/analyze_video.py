@@ -1,0 +1,485 @@
+#!/usr/bin/env python3
+"""
+analyze_video.py — 抖音视频内容分析 v2 主流程。
+
+流程：
+1. SSR 解析短链 → 获取元数据 + play_addr
+2. ffmpeg 抽取关键帧 + OCR 字幕帧
+3. OpenAI-compatible 视觉模型分析关键帧
+4. OpenAI-compatible 视觉模型 OCR 字幕
+5. 生成 Markdown 分析笔记
+6. Upsert 结构化数据到 videos.jsonl
+
+用法：
+    python3 scripts/analyze_video.py "https://v.douyin.com/IwKUHooX8us/" [--tags 标签1 标签2]
+"""
+
+import json
+import os
+import sys
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+# ── 项目路径 ──────────────────────────────────────────
+
+_PROJECT_ROOT = Path(
+    os.environ.get("DOUYIN_RESEARCH_ROOT", Path(__file__).resolve().parents[1])
+).resolve()
+
+_DATA_DIR = _PROJECT_ROOT / "data"
+_NOTES_DIR = _PROJECT_ROOT / "notes"
+_SCREENSHOTS_DIR = _PROJECT_ROOT / "screenshots"
+_TMP_DIR = _DATA_DIR / "tmp"
+
+CST = timezone(timedelta(hours=8))
+
+# 确保目录存在
+for d in [_DATA_DIR, _NOTES_DIR, _SCREENSHOTS_DIR, _TMP_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
+
+# 添加 scripts/lib 到路径
+sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
+
+from lib.douyin_ssr import parse_short_url, VideoMeta
+from lib.media_extract import extract_frames, cleanup_ocr_frames
+from lib.vision_ocr import (
+    analyze_keyframes, compose_scene_summary,
+    analyze_ocr_frames, compose_subtitle_text,
+    ENABLED as VISION_ENABLED,
+    VISION_MODEL,
+    vision_backend_label,
+)
+
+
+# ── 辅助函数 ──────────────────────────────────────────
+
+def _timestamp() -> str:
+    return datetime.now(CST).isoformat()
+
+
+def _date_str() -> str:
+    return datetime.now(CST).strftime("%Y-%m-%d")
+
+
+# ── 主流程 ────────────────────────────────────────────
+
+def analyze_video(short_url: str, tags: list[str] | None = None) -> dict:
+    """
+    完整分析一条抖音视频。
+    
+    Returns:
+        dict 包含 video_id, note_path, play_addr, keyframe_count, ocr_count, ...
+    """
+    tags = tags or []
+    result = {
+        "short_url": short_url,
+        "tags": tags,
+        "status": "pending",
+        "started_at": _timestamp(),
+        "errors": [],
+    }
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 1: SSR 元数据提取
+    # ═══════════════════════════════════════════════════════
+    try:
+        meta = parse_short_url(short_url)
+    except Exception as e:
+        result["status"] = "failed"
+        result["error"] = f"SSR 解析失败: {e}"
+        _record_failed(short_url, str(e))
+        return result
+    
+    video_id = meta.video_id
+    duration_sec = meta.duration_ms / 1000 if meta.duration_ms else 0
+    
+    result["video_id"] = video_id
+    result["meta"] = meta
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 2: 抽帧
+    # ═══════════════════════════════════════════════════════
+    frame_output_root = str(_SCREENSHOTS_DIR / video_id)
+    frame_result = None
+    if meta.play_addr:
+        try:
+            frame_result = extract_frames(
+                play_addr=meta.play_addr,
+                output_root=frame_output_root,
+                duration_sec=duration_sec if duration_sec > 0 else None,
+                video_id=video_id,
+            )
+        except Exception as e:
+            result["frame_error"] = str(e)
+            result["errors"].append(f"frame extraction failed: {e}")
+    else:
+        result["frame_error"] = "无 play_addr"
+        result["errors"].append("missing play_addr")
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 3: 视觉分析 + OCR
+    # ═══════════════════════════════════════════════════════
+    scene_summary = ""
+    subtitle_text = ""
+    keyframe_count = 0
+    ocr_count = 0
+    
+    if frame_result and frame_result.keyframe_paths:
+        keyframe_count = frame_result.keyframe_count
+        if VISION_ENABLED:
+            # 根据帧数动态调整分析量，避免 API 调用过多
+            max_kf_analyze = min(keyframe_count, 8)
+            analyses = analyze_keyframes(
+                frame_result.keyframe_paths,
+                max_frames=max_kf_analyze,
+                actual_duration=(
+                    frame_result.duration_sec
+                    if not frame_result.duration_truncated
+                    else min(frame_result.duration_sec, 180)
+                )
+            )
+            scene_summary = compose_scene_summary(analyses)
+        else:
+            scene_summary = "（视觉模型 API 不可用，未进行画面分析）"
+    else:
+        scene_summary = "（未提取到关键帧，可能 play_addr 不可用或视频无法访问）"
+    
+    if frame_result and frame_result.ocr_paths:
+        ocr_count = frame_result.ocr_count
+        if VISION_ENABLED:
+            ocr_results = analyze_ocr_frames(frame_result.ocr_paths, max_frames=20)
+            subtitle_text = compose_subtitle_text(ocr_results)
+        else:
+            subtitle_text = "（视觉模型 API 不可用，未进行 OCR）"
+    else:
+        subtitle_text = "（未提取到 OCR 帧）"
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 4: 清理 OCR 临时帧
+    # ═══════════════════════════════════════════════════════
+    if frame_result:
+        cleanup_ocr_frames(frame_result.ocr_dir)
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 4.5: 合成学习要点
+    # ═══════════════════════════════════════════════════════
+    learning_points = _synthesize_learning_points(
+        title=meta.title,
+        description=meta.description,
+        scene_summary=scene_summary,
+        subtitle_text=subtitle_text,
+    )
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 5: 生成 Markdown 笔记
+    # ═══════════════════════════════════════════════════════
+    note_path = _NOTES_DIR / f"{_date_str()}-{video_id}.md"
+    _write_note(
+        meta=meta,
+        scene_summary=scene_summary,
+        subtitle_text=subtitle_text,
+        learning_points=learning_points,
+        keyframe_count=keyframe_count,
+        ocr_count=ocr_count,
+        duration_truncated=frame_result.duration_truncated if frame_result else False,
+        effective_duration=frame_result.duration_sec if frame_result else 0,
+        note_path=note_path,
+        tags=tags,
+    )
+    
+    # ═══════════════════════════════════════════════════════
+    # Phase 6: upsert videos.jsonl
+    # ═══════════════════════════════════════════════════════
+    _append_videos_jsonl(
+        meta=meta,
+        scene_summary=scene_summary,
+        subtitle_text=subtitle_text,
+        note_path=str(note_path.relative_to(_PROJECT_ROOT)),
+        screenshot_dir=str(Path(frame_output_root).relative_to(_PROJECT_ROOT)),
+        tags=tags,
+        keyframe_count=keyframe_count,
+        ocr_count=ocr_count,
+        status="completed" if keyframe_count > 0 else "partial",
+        errors=result["errors"],
+    )
+    
+    # 收尾
+    result["status"] = "completed" if keyframe_count > 0 else "partial"
+    result["note_path"] = str(note_path.relative_to(_PROJECT_ROOT))
+    result["keyframe_count"] = keyframe_count
+    result["ocr_count"] = ocr_count
+    result["play_addr_present"] = bool(meta.play_addr)
+    result["completed_at"] = _timestamp()
+    
+    return result
+
+
+# ── 学习要点合成 ──────────────────────────────────────────
+
+def _synthesize_learning_points(
+    title: str,
+    description: str,
+    scene_summary: str,
+    subtitle_text: str,
+) -> str:
+    """调用主模型合成学习要点。"""
+    import urllib.request as _ur
+    
+    prompt = f"""你是一个视频内容分析助手。请根据以下证据，提取 3-6 条学习要点。每条要独立、有信息量、可直接引用。用中文输出。
+
+格式要求：
+- 每条以「- 」开头
+- 每条 1-3 句
+- 不要重复标题和基本信息
+- 不要输出「没有足够信息」——尽你所能从证据中提取
+
+=== 标题 ===
+{title}
+
+=== 文案 ===
+{description}
+
+=== 画面分析 ===
+{scene_summary[:3000]}
+
+=== OCR 字幕文字 ===
+{subtitle_text[:3000]}
+
+学习要点："""
+
+    payload = {
+        "model": "qwen-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1024,
+        "temperature": 0.3,
+    }
+    
+    try:
+        api_key = os.environ.get("USTC_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        api_base = os.environ.get("API_BASE", "http://114.214.240.204:8000/v1")
+        req = _ur.Request(
+            f"{api_base}/chat/completions",
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            }
+        )
+        resp = _ur.urlopen(req, timeout=60)
+        data = json.loads(resp.read())
+        return data["choices"][0]["message"]["content"].strip()
+    except Exception:
+        return "（学习要点合成失败）"
+
+
+# ── 笔记生成 ──────────────────────────────────────────
+
+def _write_note(
+    meta: VideoMeta,
+    scene_summary: str,
+    subtitle_text: str,
+    learning_points: str,
+    keyframe_count: int,
+    ocr_count: int,
+    duration_truncated: bool,
+    effective_duration: float,
+    note_path: Path,
+    tags: list[str],
+) -> None:
+    """生成 Markdown 分析笔记。"""
+    duration_display = f"约 {meta.duration_ms/1000:.0f} 秒（{meta.duration_ms}ms）"
+    duration_hint = ""
+    if duration_truncated:
+        duration_hint = f"\n> ⚠️ 视频时长超过 3 分钟，仅分析了前 {effective_duration/60:.0f} 分钟。"
+    
+    hashtag_display = ", ".join(f"`{t}`" for t in meta.hashtags) if meta.hashtags else "无"
+    tag_display = ", ".join(f"`{t}`" for t in tags) if tags else "无"
+    vision_label = vision_backend_label() if VISION_ENABLED else "视觉模型未启用"
+    
+    content = f"""# {meta.title or '(无标题)'}
+
+**来源**：{meta.raw_url}
+**短链**：{meta.short_url}
+**作者**：{meta.author}{' ( @' + meta.author_unique_id + ' )' if meta.author_unique_id else ''}
+**video_id**：`{meta.video_id}`
+**采集时间**：{_timestamp()}
+**时长**：{duration_display}{duration_hint}
+
+## 📋 视频信息
+
+| 属性 | 值 |
+|------|-----|
+| 文案 | {meta.description or '无'} |
+| 话题 | {hashtag_display} |
+| 配乐 | {meta.music or '未识别'} |
+| 用户标签 | {tag_display} |
+
+## 📊 数据表现
+
+| 指标 | 数值 |
+|------|------|
+| 👍 点赞 | {meta.statistics.get('digg_count', 0):,} |
+| 💬 评论 | {meta.statistics.get('comment_count', 0):,} |
+| 🔄 分享 | {meta.statistics.get('share_count', 0):,} |
+| ⭐ 收藏 | {meta.statistics.get('collect_count', 0):,} |
+| ▶️ 播放 | {meta.statistics.get('play_count', 0):,} |
+
+## 👤 作者信息
+
+| 属性 | 值 |
+|------|-----|
+| 昵称 | {meta.author} |
+| 抖音号 | {meta.author_unique_id} |
+| 作品数 | {meta.author_stats.get('aweme_count', 'N/A')} |
+| 粉丝数 | {meta.author_stats.get('followers', 'N/A'):,} |
+
+## 🎬 画面分析
+
+> **证据来源**：基于画面观察（共 {keyframe_count} 张关键帧）
+> **分析模型**：{vision_label}
+
+{scene_summary}
+
+## 📝 可见字幕 / 文字（OCR）
+
+> **证据来源**：基于 OCR 识别（{ocr_count} 张 OCR 帧，{vision_label}）
+> ⚠️ 不做音频 ASR，以下仅为视频中**可见文字**的提取结果。
+
+{subtitle_text}
+
+## 🔍 学习要点
+
+> ⚠️ 以下为 AI 分析，基于标题、画面、字幕的**可观察证据**，非确定性结论。
+
+{learning_points}
+
+---
+
+*本笔记由 Hermes 抖音 Agent 视频研究助理 v2 自动生成*
+*视觉模型: {vision_label} | 抽帧: ffmpeg scene detection + uniform sampling*
+"""
+    
+    with open(note_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+# ── 结构化数据 upsert ─────────────────────────────────
+
+def _record_score(record: dict) -> tuple[int, int, str]:
+    """Prefer records with frame evidence, OCR evidence, then latest timestamp."""
+    return (
+        int(record.get("keyframe_count") or 0),
+        int(record.get("ocr_frame_count") or 0),
+        str(record.get("collected_at") or ""),
+    )
+
+def _append_videos_jsonl(
+    meta: VideoMeta,
+    scene_summary: str,
+    subtitle_text: str,
+    note_path: str,
+    screenshot_dir: str,
+    tags: list[str],
+    keyframe_count: int,
+    ocr_count: int,
+    status: str,
+    errors: list[str],
+) -> None:
+    """Upsert into data/videos.jsonl, keeping one best record per video_id."""
+    record = {
+        "schema_version": 2,
+        "status": status,
+        "video_id": meta.video_id,
+        "aweme_id": meta.aweme_id,
+        "url": meta.raw_url,
+        "short_url": meta.short_url,
+        "title": meta.title,
+        "author": meta.author,
+        "author_unique_id": meta.author_unique_id,
+        "description": meta.description,
+        "hashtags": meta.hashtags,
+        "music": meta.music,
+        "duration_ms": meta.duration_ms,
+        "play_addr_present": bool(meta.play_addr),
+        "statistics": meta.statistics,
+        "author_stats": meta.author_stats,
+        "visual_summary": scene_summary,
+        "ocr_text": subtitle_text,
+        "keyframe_count": keyframe_count,
+        "ocr_frame_count": ocr_count,
+        "note_path": note_path,
+        "screenshot_dir": screenshot_dir,
+        "tags": tags,
+        "errors": errors,
+        "collected_at": _timestamp(),
+        "source": "SSR HTML (_ROUTER_DATA) + ffmpeg frame extraction",
+        "vision_model": VISION_MODEL if VISION_ENABLED else "",
+        "vision_backend": vision_backend_label() if VISION_ENABLED else "",
+    }
+    
+    videos_path = _DATA_DIR / "videos.jsonl"
+    other_records = []
+    same_video_records = [record]
+    if videos_path.exists():
+        with videos_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    existing = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if existing.get("video_id") == meta.video_id:
+                    same_video_records.append(existing)
+                else:
+                    other_records.append(existing)
+
+    best_record = max(same_video_records, key=_record_score)
+    records = other_records + [best_record]
+    with videos_path.open("w", encoding="utf-8") as f:
+        for item in records:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+
+def _record_failed(url: str, reason: str) -> None:
+    """记录失败。"""
+    record = {
+        "url": url,
+        "reason": reason,
+        "attempted_at": _timestamp(),
+    }
+    failed_path = _DATA_DIR / "failed.jsonl"
+    with open(failed_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+# ── 入口 ──────────────────────────────────────────────
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="抖音视频内容分析 v2")
+    parser.add_argument("url", help="抖音短链")
+    parser.add_argument("--tags", nargs="*", default=[], help="标签")
+    args = parser.parse_args()
+    
+    print(f"🔍 开始分析: {args.url}")
+    result = analyze_video(args.url, args.tags)
+    
+    if result["status"] in {"completed", "partial"}:
+        label = "✅ 分析完成" if result["status"] == "completed" else "⚠️ 部分完成"
+        print(label)
+        print(f"   video_id: {result['video_id']}")
+        print(f"   play_addr_present: {result['play_addr_present']}")
+        print(f"   关键帧: {result['keyframe_count']} 张")
+        print(f"   OCR 帧: {result['ocr_count']} 张")
+        print(f"   笔记: {result['note_path']}")
+        if result.get("errors"):
+            print(f"   errors: {result['errors']}")
+    else:
+        print(f"❌ 分析失败: {result.get('error', '未知错误')}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
