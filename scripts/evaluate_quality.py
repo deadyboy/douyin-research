@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate Douyin analysis quality against the curated example set.
+"""Run structural smoke tests against the curated Douyin example set.
 
 This script is intentionally read-only for source data. It reads:
 - eval/examples.jsonl
@@ -7,6 +7,10 @@ This script is intentionally read-only for source data. It reads:
 - notes/*.md
 
 It writes reports under reports/eval/.
+
+Despite the historical filename, this is not a semantic quality grader. It is
+a structural smoke test for record presence, evidence artifacts, and expected
+sections in stored machine-readable analysis.
 """
 
 from __future__ import annotations
@@ -212,7 +216,7 @@ def _write_markdown(rows: list[dict], path: Path) -> None:
     passed = sum(1 for row in rows if row.get("status") == "pass")
     total = len(rows)
     lines = [
-        "# Douyin Example Quality Report",
+        "# Structural Smoke Test Report",
         "",
         f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Pass: {passed}/{total}",
@@ -237,7 +241,8 @@ def _write_markdown(rows: list[dict], path: Path) -> None:
         "## Review Notes",
         "",
         "- `needs-review` means the record exists but at least one quality check failed.",
-        "- Keyword checks are recall-oriented smoke tests, not semantic grading.",
+        "- This is a structural smoke test, not semantic grading.",
+        "- Keyword checks are recall-oriented and are only meant to catch missing artifacts.",
         "- This report does not re-fetch Douyin; it evaluates current local artifacts.",
     ])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -259,16 +264,17 @@ def main() -> None:
         rows.append(_evaluate_one(example, record))
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    jsonl_path = Path(args.jsonl) if args.jsonl else REPORT_DIR / f"quality-{stamp}.jsonl"
-    md_path = Path(args.md) if args.md else REPORT_DIR / f"quality-{stamp}.md"
+    jsonl_path = Path(args.jsonl) if args.jsonl else REPORT_DIR / f"structural-smoke-{stamp}.jsonl"
+    md_path = Path(args.md) if args.md else REPORT_DIR / f"structural-smoke-{stamp}.md"
     with jsonl_path.open("w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     _write_markdown(rows, md_path)
 
     passed = sum(1 for row in rows if row.get("status") == "pass")
-    print(f"QUALITY_JSONL {jsonl_path}")
-    print(f"QUALITY_MD {md_path}")
+    print(f"STRUCTURAL_SMOKE_JSONL {jsonl_path}")
+    print(f"STRUCTURAL_SMOKE_MD {md_path}")
+    print("TEST_NAME structural_smoke_test")
     print(f"PASS {passed}/{len(rows)}")
     for row in rows:
         if row.get("status") != "pass":

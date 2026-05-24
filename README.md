@@ -12,7 +12,7 @@ Douyin share link
 -> ffmpeg scene-change frames for evidence verification
 -> OCR frames as text fallback
 -> image-post fallback when SSR exposes images instead of video frames
--> notes/*.md and data/videos.jsonl
+-> public notes, audit reports, and data/videos.jsonl
 ```
 
 The project-level `.env` points the visual layer to the local OpenAI-compatible
@@ -62,6 +62,13 @@ Evaluate the curated example set without re-fetching Douyin:
 
 ```bash
 python3 scripts/evaluate_quality.py
+python3 scripts/evaluate_notes_readability.py
+```
+
+Regenerate public notes and audit logs from existing records:
+
+```bash
+python3 scripts/regenerate_human_notes.py --execute
 ```
 
 Maintenance:
@@ -93,6 +100,8 @@ douyin-agent-research/
 │   └── tmp/
 ├── notes/
 ├── reports/
+│   ├── audit/
+│   └── eval/
 ├── screenshots/
 └── scripts/
     ├── analyze_video.py
@@ -116,12 +125,19 @@ douyin-agent-research/
 
 Each successful analysis produces:
 
-- One Markdown note under `notes/`.
+- One human-readable Markdown note under `notes/`.
+- One internal audit report under `reports/audit/`.
 - Scene-change keyframes under `screenshots/{video_id}/keyframes/`.
 - One upserted structured record in `data/videos.jsonl`.
 - A learning-points section synthesized from broad evidence coverage, centered on the video's core thesis.
 
 `data/videos.jsonl` should contain one best current record per `video_id`.
+
+Output is deliberately layered:
+
+- `notes/*.md` is the public article. It should read like a video explanation note and must not expose token usage, raw OCR blocks, raw frame verification, frame counts, audit scores, or warning lists.
+- `reports/audit/*.json` is the machine-readable internal review log. It stores coverage stats, evidence sources, conflict warnings, raw frame verification, OCR summaries, quality score, and precise long-video coverage.
+- `data/videos.jsonl` keeps the current structured record, including `video_first_summary`, `frame_verification`, `ocr_text`, `learning_points`, `human_summary`, `audit_report_path`, `note_style_version`, and analysis metadata.
 
 ## Analysis Strategy
 
@@ -154,15 +170,20 @@ Run:
 
 ```bash
 python3 scripts/evaluate_quality.py
+python3 scripts/evaluate_notes_readability.py
 ```
 
 The command writes:
 
 ```text
-reports/eval/quality-*.jsonl
-reports/eval/quality-*.md
+reports/eval/structural-smoke-*.jsonl
+reports/eval/structural-smoke-*.md
+reports/eval/readability-*.jsonl
+reports/eval/readability-*.md
 ```
 
-This is a regression check for parser/media-type handling, evidence coverage,
-learning-point generation, core-thesis extraction, actionable reproduction, and
-path cleanliness. It does not re-download videos or modify source data.
+`evaluate_quality.py` is a structural smoke test for parser/media-type handling,
+evidence coverage, learning-point generation, core-thesis extraction, actionable
+reproduction, and path cleanliness. `evaluate_notes_readability.py` checks that
+public notes use the v3 human-readable structure and do not leak debug/audit
+terms. Neither command re-downloads videos or modifies source data.

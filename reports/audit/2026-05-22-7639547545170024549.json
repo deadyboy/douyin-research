@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-05-24T16:28:56.382556+08:00",
+  "video_id": "7639547545170024549",
+  "title": "给你的龙虾或者爱马仕装上桌面自动化的手和眼睛，替你操作任何App软件#解锁你的编程技能 #创作者中心 #创作灵感 #自动化 #RPA",
+  "short_url": "https://v.douyin.com/vTsxwbKlHKA/\\",
+  "status": "completed",
+  "analysis_mode": "image-post+vision-analysis",
+  "coverage_stats": {
+    "original_duration_sec": 0.0,
+    "effective_duration_sec": 0.0,
+    "duration_truncated": false,
+    "keyframe_count": 1,
+    "frame_verified_count": 1,
+    "ocr_frame_count": 0
+  },
+  "evidence_sources": {
+    "metadata": true,
+    "video_first_summary": true,
+    "frame_verification": false,
+    "ocr_text": false,
+    "learning_points": true
+  },
+  "conflict_warnings": [],
+  "numeric_or_entity_conflicts": {},
+  "quality_score": 100,
+  "fatal_errors": [],
+  "major_warnings": [],
+  "minor_warnings": [],
+  "errors": [],
+  "video_usage": {},
+  "raw": {
+    "video_first_summary": "（video-first 视觉模型调用失败）",
+    "frame_verification": "",
+    "ocr_text": "（未提取到 OCR 帧）",
+    "ocr_compact": "（未提取到 OCR 帧）",
+    "learning_points": "### 核心思想\n- 视频主张：通过在ClawHub平台发布并安装“PeekabooV3 open claw”这一桌面自动化技能，用户可以赋予其macOS设备（比喻为“龙虾”或“爱马仕”）自动操作桌面应用的能力，实现对Finder、Terminal、系统弹窗等原生GUI的智能控制，从而替代人工操作。\n- 它试图改变观众对“桌面自动化只能通过复杂脚本或专业工具实现”的理解，转而推广一种基于技能（skill）插件、可一键安装、面向非专业开发者的轻量化自动化范式。\n\n### 证据链\n1. **证据**：网页截图中显示“PeekabooV3 open claw的桌面自动化skill”标题及英文描述，明确列出支持“click, type, scroll, drag, switch apps, handle popups, automate desktop workflow on Mac”等操作。  \n   → **结论**：该技能具备完整的桌面GUI自动化能力，覆盖常见用户交互动作。\n\n2. **证据**：描述中提到“Use Peekaboo for macOS desktop GUI automation, screen understanding, and MCP-backed local app control”，并强调“Prefer this over browser automation for native macOS interfaces”。  \n   → **结论**：该技能专为macOS原生应用设计，优先于浏览器自动化，定位清晰，解决特定场景痛点。\n\n3. **证据**：安装指令“openclaw skills install peekaboo-macos-automation”直接展示在页面上，且为命令行格式。  \n   → **结论**：该技能可通过标准化命令安装，说明其属于ClawHub生态中的可复用模块，具备可操作性。\n\n4. **证据**：审计信息显示“Static analysis Pass”，且许可证为MIT-0，更新时间为“just now”，版本v1.0.0。  \n   → **结论**：该技能为新发布、开源、通过安全检测，具备可信度和可部署性。\n\n5. **证据**：顶部宣传语“给你小龙虾（爱马仕）装上眼睛和手，操控一切”与底部“上架一个桌面自动化skill”形成前后呼应。  \n   → **结论**：视频核心叙事是“将自动化能力封装为可发布、可安装的skill”，并以拟人化比喻强调其“赋予设备智能操作能力”的价值。\n\n6. **证据**：页面路径“skills / zimuoo / peekaboo-macos-automation”表明该skill由用户“子沫”发布，属于用户生成内容（UGC）生态。  \n   → **结论**：该平台支持个人开发者发布自动化技能，形成可共享、可复用的自动化社区。\n\n### 可学习的方法\n1. **方法**：将桌面自动化能力封装为“skill”模块，通过标准化接口（如ClawHub）发布。  \n   - **适用场景**：开发者希望将特定自动化逻辑（如自动处理弹窗、切换应用）打包成可复用组件。  \n   - **为什么有用**：降低使用门槛，便于他人一键安装、集成，形成自动化生态。\n\n2. **方法**：在技能描述中明确触发条件（如“当用户提到Peekaboo”或“需要控制Finder”），并优先处理原生GUI而非浏览器。  \n   - **适用场景**：设计面向macOS用户的自动化Agent或助手。  \n   - **为什么有用**：提升自动化精准度，避免误触发，增强用户体验。\n\n3. **方法**：使用“Static analysis”等安全审计机制对技能进行预检，确保可信任。  \n   - **适用场景**：构建开放技能平台或共享自动化生态。  \n   - **为什么有用**：建立用户信任，降低安全风险，促进社区发展。\n\n4. **方法**：采用MIT-0等宽松许可证发布技能，鼓励开源共享。  \n   - **适用场景**：希望快速获得社区反馈、协作优化的开发者。  \n   - **为什么有用**：加速技能迭代，扩大影响力，形成正向循环。\n\n5. **方法**：通过宣传语“给龙虾装上眼睛和手”将技术能力拟人化，增强传播力。  \n   - **适用场景**：技术产品推广、社区运营、内容创作。  \n   - **为什么有用**：降低技术理解门槛，提升用户兴趣和记忆点。\n\n### 可复现行动\n1. **行动**：在终端执行命令 `openclaw skills install peekaboo-macos-automation`，安装该技能。  \n   - **验证点**：安装成功后，检查是否能在本地macOS环境中调用Peekaboo进行GUI操作。\n\n2. **行动**：访问ClawHub平台（https://clawhub.com），搜索“peekaboo-macos-automation”，查看其文档和版本历史。  \n   - **验证点**：确认技能是否持续更新，是否有用户反馈或使用案例。\n\n3. **行动**：尝试在本地macOS系统中，通过该技能实现“自动点击Finder中的文件”或“在Terminal中输入命令”等基础操作。  \n   - **验证点**：验证技能是否能正确识别UI元素并执行动作。\n\n4. **行动**：在ClawHub上创建自己的skill，描述其触发条件、支持操作和安全审计信息，尝试发布。  \n   - **验证点**：体验从开发到发布的完整流程，理解平台机制。\n\n5. **行动**：编写一个简单的自动化任务，如“当检测到系统弹窗时自动点击‘确定’”，并封装为skill。  \n   - **验证点**：测试该skill在真实场景中的响应准确率和稳定性。\n\n### 局限与待核查\n1. **信息缺失**：视频仅提供一张静态截图，无音频、无操作演示，无法验证技能实际运行效果（如是否能准确识别UI、是否稳定执行）。\n\n2. **“任何App软件”未验证**：文案声称“替你操作任何App软件”，但截图中仅列出macOS原生应用（Finder、Terminal等），未展示对第三方App（如Photoshop、微信、Slack）的支持情况。\n\n3. **“RPA”标签未展开**：视频标签包含“RPA”，但截图中未说明该skill是否符合RPA标准（如流程编排、异常处理、日志记录等），需进一步查证其是否具备企业级RPA能力。\n\n4. **“龙虾/爱马仕”比喻未解释**：该比喻可能用于吸引眼球，但未在截图中解释其与自动化能力的关联，可能造成理解偏差，需结合完整视频或上下文确认其意图。"
+  }
+}

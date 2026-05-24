@@ -17,6 +17,7 @@ analyze_video.py — 抖音视频内容分析 v2 主流程。
 
 import json
 import os
+import re
 import sys
 import urllib.request
 from datetime import datetime, timezone, timedelta
@@ -30,13 +31,15 @@ _PROJECT_ROOT = Path(
 
 _DATA_DIR = _PROJECT_ROOT / "data"
 _NOTES_DIR = _PROJECT_ROOT / "notes"
+_REPORTS_DIR = _PROJECT_ROOT / "reports"
+_AUDIT_DIR = _REPORTS_DIR / "audit"
 _SCREENSHOTS_DIR = _PROJECT_ROOT / "screenshots"
 _TMP_DIR = _DATA_DIR / "tmp"
 
 CST = timezone(timedelta(hours=8))
 
 # 确保目录存在
-for d in [_DATA_DIR, _NOTES_DIR, _SCREENSHOTS_DIR, _TMP_DIR]:
+for d in [_DATA_DIR, _NOTES_DIR, _REPORTS_DIR, _AUDIT_DIR, _SCREENSHOTS_DIR, _TMP_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # 添加 scripts/lib 到路径
@@ -287,24 +290,57 @@ def analyze_video(short_url: str, tags: list[str] | None = None) -> dict:
     )
     
     # ═══════════════════════════════════════════════════════
-    # Phase 5: 生成 Markdown 笔记
+    # Phase 5: 证据消解 + 生成 public note + audit report
     # ═══════════════════════════════════════════════════════
     note_path = _NOTES_DIR / f"{_date_str()}-{video_id}.md"
-    _write_note(
+    audit_path = _AUDIT_DIR / f"{_date_str()}-{video_id}.json"
+    coverage_stats = _build_coverage_stats(
         meta=meta,
-        scene_summary=scene_summary,
+        frame_result=frame_result,
+        keyframe_count=keyframe_count,
+        frame_verified_count=frame_verified_count,
+        ocr_count=ocr_count,
+    )
+    analysis_mode = (
+        "image-post+vision-analysis"
+        if len(image_evidence_paths) and not video_first_ok
+        else "video-first+scene-verification+ocr-fallback"
+    )
+    resolved_evidence = resolve_evidence(
+        title=meta.title,
+        description=meta.description,
+        video_summary=video_summary,
+        frame_verification=frame_verification,
         subtitle_text=subtitle_text,
         learning_points=learning_points,
-        keyframe_count=keyframe_count,
-        ocr_count=ocr_count,
-        duration_truncated=frame_result.duration_truncated if frame_result else False,
-        effective_duration=frame_result.duration_sec if frame_result else 0,
-        video_first_ok=video_first_ok,
-        frame_verified_count=frame_verified_count,
-        video_usage=video_usage,
-        note_path=note_path,
-        tags=tags,
+        analysis_mode=analysis_mode,
+        errors=result["errors"],
     )
+    human_note = _synthesize_human_note(
+        meta=meta,
+        video_summary=video_summary,
+        frame_verification=frame_verification,
+        subtitle_text=subtitle_text,
+        learning_points=learning_points,
+        resolved_evidence=resolved_evidence,
+        coverage_stats=coverage_stats,
+        analysis_mode=analysis_mode,
+    )
+    _write_human_note(note_path, human_note)
+    audit_report = _build_audit_report(
+        meta=meta,
+        coverage_stats=coverage_stats,
+        resolved_evidence=resolved_evidence,
+        video_summary=video_summary,
+        frame_verification=frame_verification,
+        subtitle_text=subtitle_text,
+        learning_points=learning_points,
+        video_usage=video_usage,
+        analysis_mode=analysis_mode,
+        status="completed" if (video_first_ok or keyframe_count > 0) else "partial",
+        errors=result["errors"],
+    )
+    _write_audit_report(audit_path, audit_report)
     
     # ═══════════════════════════════════════════════════════
     # Phase 6: upsert videos.jsonl
@@ -325,6 +361,10 @@ def analyze_video(short_url: str, tags: list[str] | None = None) -> dict:
         video_usage=video_usage,
         video_first_ok=video_first_ok,
         image_evidence_count=len(image_evidence_paths),
+        human_summary=human_note,
+        audit_report_path=str(audit_path.relative_to(_PROJECT_ROOT)),
+        coverage_stats=coverage_stats,
+        analysis_mode=analysis_mode,
         status="completed" if (video_first_ok or keyframe_count > 0) else "partial",
         errors=result["errors"],
     )
@@ -332,6 +372,7 @@ def analyze_video(short_url: str, tags: list[str] | None = None) -> dict:
     # 收尾
     result["status"] = "completed" if (video_first_ok or keyframe_count > 0) else "partial"
     result["note_path"] = str(note_path.relative_to(_PROJECT_ROOT))
+    result["audit_report_path"] = str(audit_path.relative_to(_PROJECT_ROOT))
     result["keyframe_count"] = keyframe_count
     result["frame_verified_count"] = frame_verified_count
     result["ocr_count"] = ocr_count
@@ -514,115 +555,397 @@ def _synthesize_learning_points(
         return f"（学习要点合成失败：{type(e).__name__}）"
 
 
-# ── 笔记生成 ──────────────────────────────────────────
+# ── 输出分层：resolver、human note、audit report ───────────────────────
 
-def _write_note(
+_HUMAN_NOTE_HEADINGS = [
+    "## 一句话概括",
+    "## 这个视频在讲什么",
+    "## 关键内容拆解",
+    "## 为什么值得关注",
+    "## 可以怎么复用",
+    "## 需要注意的边界",
+]
+
+_FORBIDDEN_PUBLIC_NOTE_PATTERNS = [
+    "overall_score",
+    "fatal_errors",
+    "major_warnings",
+    "minor_warnings",
+    "token usage",
+    "Video token usage",
+    "frame_verified_count",
+    "ocr_frame_count",
+    "Video-first 时间轴主分析",
+    "Scene-change 关键帧复核",
+]
+
+
+def _build_coverage_stats(
     meta: VideoMeta,
-    scene_summary: str,
+    frame_result,
+    keyframe_count: int,
+    frame_verified_count: int,
+    ocr_count: int,
+) -> dict:
+    original_duration_sec = meta.duration_ms / 1000 if meta.duration_ms else 0
+    effective_duration_sec = 0
+    duration_truncated = False
+    if frame_result:
+        effective_duration_sec = frame_result.duration_sec
+        duration_truncated = bool(frame_result.duration_truncated)
+        if duration_truncated:
+            effective_duration_sec = min(
+                effective_duration_sec,
+                float(os.environ.get("DOUYIN_MAX_ANALYZE_SECONDS", "600")),
+            )
+    return {
+        "original_duration_sec": round(original_duration_sec, 3),
+        "effective_duration_sec": round(effective_duration_sec or original_duration_sec, 3),
+        "duration_truncated": duration_truncated,
+        "keyframe_count": keyframe_count,
+        "frame_verified_count": frame_verified_count,
+        "ocr_frame_count": ocr_count,
+    }
+
+
+def _extract_warning_lines(text: str, limit: int = 30) -> list[str]:
+    patterns = ("修正", "不符", "错误", "证据不足", "无法确认", "冲突", "矛盾", "待核查", "看不清")
+    lines = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if line and any(p in line for p in patterns):
+            lines.append(line[:500])
+        if len(lines) >= limit:
+            break
+    return lines
+
+
+def _extract_key_values(text: str) -> dict[str, list[str]]:
+    result: dict[str, set[str]] = {}
+    pattern = re.compile(
+        r"([A-Za-z][A-Za-z0-9_./-]{1,24})\s*[=:：]\s*([0-9]+(?:\.[0-9]+)?\s*(?:V|A|Hz|kHz|MHz|ms|s|秒|分钟|%|MB|GB)?)"
+    )
+    for key, value in pattern.findall(text or ""):
+        result.setdefault(key, set()).add(" ".join(value.split()))
+    return {key: sorted(values) for key, values in result.items() if len(values) > 1}
+
+
+def _canonical_name_candidates(*texts: str) -> dict[str, int]:
+    terms = [
+        "Claude Code", "OpenClaw", "Qwen", "Qwen3-VL", "DeepSeek", "Matlab", "MATLAB",
+        "MCP", "Baton", "CodeGraph", "Superpowers", "Harness", "BM25", "CSV",
+    ]
+    joined = "\n".join(texts)
+    return {term: joined.count(term) for term in terms if joined.count(term) > 0}
+
+
+def resolve_evidence(
+    title: str,
+    description: str,
+    video_summary: str,
+    frame_verification: str,
     subtitle_text: str,
     learning_points: str,
-    keyframe_count: int,
-    ocr_count: int,
-    duration_truncated: bool,
-    effective_duration: float,
-    video_first_ok: bool,
-    frame_verified_count: int,
-    video_usage: dict,
-    note_path: Path,
-    tags: list[str],
-) -> None:
-    """生成 Markdown 分析笔记。"""
-    duration_display = f"约 {meta.duration_ms/1000:.0f} 秒（{meta.duration_ms}ms）"
-    duration_hint = ""
-    if duration_truncated:
-        duration_hint = f"\n> ⚠️ 视频时长超过 3 分钟，仅分析了前 {effective_duration/60:.0f} 分钟。"
-    
-    hashtag_display = ", ".join(f"`{t}`" for t in meta.hashtags) if meta.hashtags else "无"
-    tag_display = ", ".join(f"`{t}`" for t in tags) if tags else "无"
-    vision_label = vision_backend_label() if VISION_ENABLED else "视觉模型未启用"
-    video_first_display = "成功" if video_first_ok else "未成功/未启用"
-    usage_display = ""
-    if video_usage:
-        usage_display = (
-            f"prompt={video_usage.get('prompt_tokens', 'N/A')}, "
-            f"completion={video_usage.get('completion_tokens', 'N/A')}, "
-            f"total={video_usage.get('total_tokens', 'N/A')}"
+    analysis_mode: str,
+    errors: list[str],
+) -> dict:
+    """Resolve evidence conflicts without exposing resolver logs in public notes."""
+    conflict_warnings = _extract_warning_lines(frame_verification)
+    numeric_or_entity_conflicts = _extract_key_values(
+        "\n".join([video_summary, frame_verification, subtitle_text])
+    )
+    fatal_errors = [e for e in errors if "failed" in e.lower() or "失败" in e]
+    major_warnings = list(conflict_warnings[:12])
+    if numeric_or_entity_conflicts:
+        major_warnings.append("Detected possible numeric/entity conflicts in extracted evidence.")
+    minor_warnings = conflict_warnings[12:]
+    evidence_sources = {
+        "metadata": bool(title or description),
+        "video_first_summary": bool(video_summary),
+        "frame_verification": bool(frame_verification),
+        "ocr_text": bool(subtitle_text and "未提取到 OCR 帧" not in subtitle_text),
+        "learning_points": bool(learning_points),
+    }
+    quality_score = 100
+    quality_score -= min(35, len(fatal_errors) * 15)
+    quality_score -= min(30, len(major_warnings) * 4)
+    quality_score -= min(15, len(minor_warnings))
+    quality_score = max(0, quality_score)
+    correction_hint = ""
+    if conflict_warnings:
+        correction_hint = (
+            "Frame verification contains corrections or uncertainty. Public notes should adopt "
+            "the corrected/uncertain wording rather than repeating the first-pass timeline as fact."
         )
-    
-    content = f"""# {meta.title or '(无标题)'}
+    return {
+        "resolved_summary": learning_points or video_summary or frame_verification,
+        "claim_notes": {
+            "analysis_mode": analysis_mode,
+            "canonical_name_candidates": _canonical_name_candidates(
+                title, description, video_summary, frame_verification, subtitle_text, learning_points
+            ),
+            "correction_hint": correction_hint,
+        },
+        "evidence_sources": evidence_sources,
+        "conflict_warnings": conflict_warnings,
+        "numeric_or_entity_conflicts": numeric_or_entity_conflicts,
+        "quality_score": quality_score,
+        "fatal_errors": fatal_errors,
+        "major_warnings": major_warnings,
+        "minor_warnings": minor_warnings,
+    }
 
-**来源**：{meta.raw_url}
-**短链**：{meta.short_url}
-**作者**：{meta.author}{' ( @' + meta.author_unique_id + ' )' if meta.author_unique_id else ''}
-**video_id**：`{meta.video_id}`
-**采集时间**：{_timestamp()}
-**时长**：{duration_display}{duration_hint}
 
-## 📋 视频信息
+def _call_text_model(prompt: str, max_tokens: int = 2400, temperature: float = 0.2, timeout: int = 120) -> str:
+    import urllib.error as _ue
+    import urllib.request as _ur
 
-| 属性 | 值 |
-|------|-----|
-| 文案 | {meta.description or '无'} |
-| 话题 | {hashtag_display} |
-| 配乐 | {meta.music or '未识别'} |
-| 用户标签 | {tag_display} |
+    payload = {
+        "model": os.environ.get("LEARNING_MODEL") or os.environ.get("VISION_MODEL", VISION_MODEL),
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    candidates = [
+        (
+            os.environ.get("LEARNING_API_BASE", "").rstrip("/"),
+            os.environ.get("LEARNING_MODEL") or os.environ.get("VISION_MODEL", VISION_MODEL),
+            os.environ.get("LEARNING_API_KEY", ""),
+        ),
+        (
+            os.environ.get("VISION_API_BASE", "").rstrip("/"),
+            os.environ.get("VISION_MODEL", VISION_MODEL),
+            os.environ.get("VISION_API_KEY", ""),
+        ),
+        (
+            os.environ.get("API_BASE", "").rstrip("/"),
+            os.environ.get("MODEL", "qwen-chat"),
+            os.environ.get("USTC_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
+        ),
+    ]
+    errors = []
+    for api_base, model, api_key in candidates:
+        if not api_base or not model:
+            continue
+        payload["model"] = model
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        req = _ur.Request(
+            f"{api_base}/chat/completions",
+            data=json.dumps(payload).encode(),
+            headers=headers,
+        )
+        try:
+            resp = _ur.urlopen(req, timeout=timeout)
+            data = json.loads(resp.read())
+            content = data["choices"][0]["message"]["content"].strip()
+            if content:
+                return content
+            errors.append(f"{model}@{api_base}: empty response")
+        except (_ue.URLError, TimeoutError, KeyError, IndexError, json.JSONDecodeError) as e:
+            errors.append(f"{model}@{api_base}: {type(e).__name__}")
+    return "（模型调用失败：" + "; ".join(errors[:3]) + "）"
 
-## 📊 数据表现
 
-| 指标 | 数值 |
-|------|------|
-| 👍 点赞 | {meta.statistics.get('digg_count', 0):,} |
-| 💬 评论 | {meta.statistics.get('comment_count', 0):,} |
-| 🔄 分享 | {meta.statistics.get('share_count', 0):,} |
-| ⭐ 收藏 | {meta.statistics.get('collect_count', 0):,} |
-| ▶️ 播放 | {meta.statistics.get('play_count', 0):,} |
+def _clean_heading_title(title: str) -> str:
+    title = (title or "(无标题)").strip()
+    return title.splitlines()[0].strip() or "(无标题)"
 
-## 👤 作者信息
 
-| 属性 | 值 |
-|------|-----|
-| 昵称 | {meta.author} |
-| 抖音号 | {meta.author_unique_id} |
-| 作品数 | {meta.author_stats.get('aweme_count', 'N/A')} |
-| 粉丝数 | {meta.author_stats.get('followers', 'N/A'):,} |
+def _fallback_human_note(meta: VideoMeta, learning_points: str, resolved_evidence: dict, coverage_stats: dict, analysis_mode: str) -> str:
+    compact = re.sub(r"(?m)^###\s+", "#### ", learning_points or resolved_evidence.get("resolved_summary", ""))
+    boundary = "这条内容较长，本文主要依据已分析到的画面、关键帧和可见文字整理，因此更适合作为内容导读；若要复现全部流程，仍建议回看原视频的具体操作段落。"
+    if analysis_mode == "image-post+vision-analysis":
+        boundary = "这是一条图文/静态图片内容，本文基于页面中可见图片和文字整理；它不能等同于完整的视频过程演示。"
+    elif not coverage_stats.get("duration_truncated"):
+        boundary = "本文仅基于页面可见画面、关键帧和可见文字整理，不包含评论区、账号后台或音频转写。"
+    return f"""# {_clean_heading_title(meta.title)}
 
-## 🎬 Video-first 画面分析
+## 一句话概括
 
-> **主分析**：直接输入视频文件，状态：{video_first_display}
-> **复核证据**：scene-change 关键帧共 {keyframe_count} 张，其中 {frame_verified_count} 张送入模型复核
-> **分析模型**：{vision_label}
-> **Video token usage**：{usage_display or 'N/A'}
+{(meta.description or meta.title or "这条内容围绕一个可观察主题展开。").strip()}
 
-{scene_summary}
+## 这个视频在讲什么
 
-## 📝 可见字幕 / 文字（OCR）
+这份笔记把视频中的可见画面、页面文字和已整理的学习要点合并为一篇导读。它优先采用关键帧复核后的说法；当画面或数字存在不确定时，不把宣传语或模型推断直接写成事实。
 
-> **证据来源**：基于 OCR 识别（{ocr_count} 张 OCR 帧，{vision_label}）
-> ⚠️ 不做音频 ASR，以下仅为视频中**可见文字**的提取结果。
+## 关键内容拆解
 
-{subtitle_text}
+{compact}
 
-## 🔍 学习要点
+## 为什么值得关注
 
-> ⚠️ 以下为 AI 分析，基于标题、画面、字幕的**可观察证据**，非确定性结论。
+这条内容值得关注的地方在于，它不只是展示结果，还暴露了背后的流程、工具或判断方式。对学习者来说，重点不是记住视频里的所有细节，而是提取可迁移的方法和需要验证的边界。
 
-{learning_points}
+## 可以怎么复用
 
----
+可以把视频中的主张拆成三个动作：先确认它解决的具体问题，再记录它使用的工具或概念，最后用一个小样例复现其中最关键的步骤。如果涉及产品演示或 benchmark，应把它当作“视频展示/视频声称”，再用自己的环境验证。
 
-*本笔记由 Hermes 抖音 Agent 视频研究助理 v2 自动生成*
-*视觉模型: {vision_label} | 主流程: video-first + scene-change frame verification + OCR fallback*
+## 需要注意的边界
+
+{boundary}
 """
-    
-    with open(note_path, "w", encoding="utf-8") as f:
-        f.write(content)
+
+
+def _sanitize_human_note(note: str, title: str) -> str:
+    note = (note or "").strip()
+    if note.startswith("```"):
+        note = re.sub(r"^```(?:markdown)?\s*", "", note)
+        note = re.sub(r"\s*```$", "", note)
+    if not note.startswith("# "):
+        note = f"# {_clean_heading_title(title)}\n\n{note}"
+    for heading in _HUMAN_NOTE_HEADINGS:
+        if heading not in note:
+            note += f"\n\n{heading}\n\n（本节缺少模型生成内容，需回看原视频补充。）\n"
+    cleaned_lines = []
+    for line in note.splitlines():
+        if any(pattern.lower() in line.lower() for pattern in _FORBIDDEN_PUBLIC_NOTE_PATTERNS):
+            continue
+        cleaned_lines.append(line.rstrip())
+    return "\n".join(cleaned_lines).strip() + "\n"
+
+
+def _synthesize_human_note(
+    meta: VideoMeta,
+    video_summary: str,
+    frame_verification: str,
+    subtitle_text: str,
+    learning_points: str,
+    resolved_evidence: dict,
+    coverage_stats: dict,
+    analysis_mode: str,
+) -> str:
+    visual_evidence = _spread_sample_text(
+        "\n\n".join([video_summary, frame_verification, learning_points]),
+        int(os.environ.get("DOUYIN_PUBLIC_NOTE_EVIDENCE_CHARS", "36000")),
+    )
+    compact_ocr = _spread_sample_text(
+        _dedupe_evidence_lines(subtitle_text, max_lines=120),
+        int(os.environ.get("DOUYIN_PUBLIC_NOTE_OCR_CHARS", "10000")),
+    )
+    boundary_hint = ""
+    if coverage_stats.get("duration_truncated"):
+        boundary_hint = "这条内容较长，最终笔记应自然说明：本文主要依据已分析到的画面、关键帧和可见文字整理，更适合作为内容导读；复现全部流程仍建议回看原视频。"
+    if analysis_mode == "image-post+vision-analysis":
+        boundary_hint = "这是一条图文/静态图片内容，最终笔记必须说明它不是完整视频过程演示。"
+
+    prompt = f"""请把以下机器分析结果改写成一篇面向人的 Markdown 视频讲解笔记。目标读者是想快速理解视频内容、判断是否值得学习、并知道如何复用方法的人。
+
+必须使用且只使用这些一级结构：
+# {_clean_heading_title(meta.title)}
+
+## 一句话概括
+
+## 这个视频在讲什么
+
+## 关键内容拆解
+
+## 为什么值得关注
+
+## 可以怎么复用
+
+## 需要注意的边界
+
+写作要求：
+- 像人写的视频讲解文章，使用自然段，不要写成工程日志。
+- 不要出现 token usage、OCR帧数、关键帧数量、frame_verified_count、overall_score、fatal_errors、major_warnings、minor_warnings。
+- 不要粘贴 raw OCR 全文，不要粘贴 raw frame verification。
+- 如果是产品演示或 benchmark，用“视频展示/视频声称/页面显示”，不要把宣传语直接写成事实。
+- 如果是技术教程，讲清流程、关键概念和可迁移方法。
+- 如果是数学/公式内容，保留推导主线，但不要编造证据中没有的公式。
+- 如果是图文帖，说明“这是一条图文/静态图片内容”，不要假装它是完整视频演示。
+- 如果证据冲突或关键数字需要核对，用自然语言写“画面中出现的参数需进一步核对”，不要暴露 resolver 日志。
+- {boundary_hint or "边界说明要自然、简洁，不要使用调试 warning 语气。"}
+
+=== 标题 ===
+{meta.title}
+
+=== 文案 ===
+{meta.description}
+
+=== 证据消解摘要 ===
+{resolved_evidence.get("resolved_summary", "")}
+
+=== 证据消解提示 ===
+{json.dumps(resolved_evidence.get("claim_notes", {}), ensure_ascii=False)}
+
+=== 画面与复核证据摘录 ===
+{visual_evidence}
+
+=== 可见文字摘录（已去重，不要全文堆叠） ===
+{compact_ocr}
+
+请输出最终 Markdown。"""
+    note = _call_text_model(
+        prompt,
+        max_tokens=int(os.environ.get("DOUYIN_PUBLIC_NOTE_MAX_TOKENS", "2600")),
+        temperature=0.2,
+        timeout=180,
+    )
+    if note.startswith("（模型调用失败"):
+        note = _fallback_human_note(meta, learning_points, resolved_evidence, coverage_stats, analysis_mode)
+    return _sanitize_human_note(note, meta.title)
+
+
+def _write_human_note(note_path: Path, content: str) -> None:
+    note_path.parent.mkdir(parents=True, exist_ok=True)
+    note_path.write_text(content, encoding="utf-8")
+
+
+def _build_audit_report(
+    meta: VideoMeta,
+    coverage_stats: dict,
+    resolved_evidence: dict,
+    video_summary: str,
+    frame_verification: str,
+    subtitle_text: str,
+    learning_points: str,
+    video_usage: dict,
+    analysis_mode: str,
+    status: str,
+    errors: list[str],
+) -> dict:
+    compact_ocr = _dedupe_evidence_lines(subtitle_text, max_lines=120)
+    return {
+        "schema_version": 1,
+        "created_at": _timestamp(),
+        "video_id": meta.video_id,
+        "title": meta.title,
+        "short_url": meta.short_url,
+        "status": status,
+        "analysis_mode": analysis_mode,
+        "coverage_stats": coverage_stats,
+        "evidence_sources": resolved_evidence.get("evidence_sources", {}),
+        "conflict_warnings": resolved_evidence.get("conflict_warnings", []),
+        "numeric_or_entity_conflicts": resolved_evidence.get("numeric_or_entity_conflicts", {}),
+        "quality_score": resolved_evidence.get("quality_score", 0),
+        "fatal_errors": resolved_evidence.get("fatal_errors", []),
+        "major_warnings": resolved_evidence.get("major_warnings", []),
+        "minor_warnings": resolved_evidence.get("minor_warnings", []),
+        "errors": errors,
+        "video_usage": video_usage,
+        "raw": {
+            "video_first_summary": video_summary,
+            "frame_verification": frame_verification,
+            "ocr_text": subtitle_text,
+            "ocr_compact": compact_ocr,
+            "learning_points": learning_points,
+        },
+    }
+
+
+def _write_audit_report(audit_path: Path, report: dict) -> None:
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    audit_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ── 结构化数据 upsert ─────────────────────────────────
 
-def _record_score(record: dict) -> tuple[int, int, int, str]:
+def _record_score(record: dict) -> tuple[int, int, int, int, str]:
     """Prefer video-first records, frame evidence, OCR evidence, then latest timestamp."""
     return (
+        int(record.get("note_style_version") or 0),
         1 if record.get("video_first_ok") else 0,
         int(record.get("keyframe_count") or 0),
         int(record.get("ocr_frame_count") or 0),
@@ -645,6 +968,10 @@ def _append_videos_jsonl(
     video_usage: dict,
     video_first_ok: bool,
     image_evidence_count: int,
+    human_summary: str,
+    audit_report_path: str,
+    coverage_stats: dict,
+    analysis_mode: str,
     status: str,
     errors: list[str],
 ) -> None:
@@ -671,6 +998,10 @@ def _append_videos_jsonl(
         "frame_verification": frame_verification,
         "ocr_text": subtitle_text,
         "learning_points": learning_points,
+        "human_summary": human_summary,
+        "audit_report_path": audit_report_path,
+        "note_style_version": 3,
+        "coverage_stats": coverage_stats,
         "learning_schema_version": 2,
         "keyframe_count": keyframe_count,
         "frame_verified_count": frame_verified_count,
@@ -681,11 +1012,7 @@ def _append_videos_jsonl(
         "errors": errors,
         "collected_at": _timestamp(),
         "source": "SSR HTML (_ROUTER_DATA) + direct video/image input + ffmpeg scene-change verification",
-        "analysis_mode": (
-            "image-post+vision-analysis"
-            if image_evidence_count and not video_first_ok
-            else "video-first+scene-verification+ocr-fallback"
-        ),
+        "analysis_mode": analysis_mode,
         "video_first_ok": video_first_ok,
         "image_evidence_count": image_evidence_count,
         "video_usage": video_usage,

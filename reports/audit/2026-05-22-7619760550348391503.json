@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-05-24T16:32:08.923284+08:00",
+  "video_id": "7619760550348391503",
+  "title": "从开发Agent到开发Harness.视角需要转变，不要再堆砌复杂的状态图了，你只需要构建 Harness。learn-claude-claude，值得每一个 Harness 工程师学习。#ai #harness #claudecode #agent",
+  "short_url": "https://v.douyin.com/H7tWAkS4Zuc/",
+  "status": "completed",
+  "analysis_mode": "image-post+vision-analysis",
+  "coverage_stats": {
+    "original_duration_sec": 0.0,
+    "effective_duration_sec": 0.0,
+    "duration_truncated": false,
+    "keyframe_count": 1,
+    "frame_verified_count": 1,
+    "ocr_frame_count": 0
+  },
+  "evidence_sources": {
+    "metadata": true,
+    "video_first_summary": true,
+    "frame_verification": false,
+    "ocr_text": false,
+    "learning_points": true
+  },
+  "conflict_warnings": [],
+  "numeric_or_entity_conflicts": {},
+  "quality_score": 100,
+  "fatal_errors": [],
+  "major_warnings": [],
+  "minor_warnings": [],
+  "errors": [],
+  "video_usage": {},
+  "raw": {
+    "video_first_summary": "（video-first 视觉模型调用失败）",
+    "frame_verification": "",
+    "ocr_text": "（未提取到 OCR 帧）",
+    "ocr_compact": "（未提取到 OCR 帧）",
+    "learning_points": "### 核心思想\n- 视频主张：当前流行的“AI Agent”开发范式（如拖拽式工作流、提示词链）本质上是脆弱、不可扩展的“胶水代码”或“鲁布·戈德堡机械”，真正的智能系统开发应转向“构建 Harness”——即为模型提供一个包含工具、知识、观察、行动接口和权限控制的完整可操作环境。这是一场从“堆砌逻辑”到“构建环境”的心智范式转变。\n- 它试图改变观众对“AI Agent”的理解：从“模型本身能自主思考”转向“模型是执行引擎，真正的智能来自其运行环境（Harness）”。\n\n---\n\n### 证据链\n1. **证据**：文字“拖拽式工作流构建器。无代码 'AI Agent' 平台。提示词链编排库。它们逻辑串在一起就算是 '构建 Agent' 了。” → **结论**：视频明确指出当前主流“Agent”开发方式是将工具和提示词简单串联，缺乏系统性设计。\n\n2. **证据**：文字“不是的。它们做出来的东西是鲁布·戈德堡机械 -- 一个过度工程化的、脆点。那不是 Agent。那是一个有着宏大妄想的 shell 脚本。” → **结论**：视频将现有“Agent”系统贬为“过度工程化、脆弱、无实质智能”的伪系统，本质是脚本化流程。\n\n3. **证据**：文字“提示词水管工式 'Agent' 是不做模型的程序员的意淫。他们试图通过堆布流 -- 然后祈祷足够多的胶水代码能涌现出自主行为。不会的。” → **结论**：视频批判“堆砌提示词+流程”的开发方式是“意淫”，认为其无法真正涌现智能行为。\n\n4. **证据**：文字“🔄 心智转换：从 '开发 Agent' 到开发 Harness” + 公式“Harness = Tools + Knowledge + Observation + Action Interface + Permissions” → **结论**：视频明确提出“心智转换”这一核心主张，并给出Harness的结构化定义，强调环境构建而非模型堆叠。\n\n5. **证据**：列表中“Tools: 文件读写、Shell、网络、数据库、浏览器”、“Knowledge: 产品文档、领域资料、API 规范、风格指南”等 → **结论**：视频通过具体示例说明Harness的组成要素，强调其作为“模型运行环境”的实际功能边界。\n\n6. **证据**：文字“那些系统从诞生之日起就已经死了：脆弱、不可扩展、根本不具备泛化能魂 -- 几十年前就被学界抛弃的符号规则系统，现在喷了一层 LLM 的漆” → **结论**：视频将现有“Agent”系统与被学界淘汰的符号系统类比，强调其技术过时性，从而强化“转向Harness”的必要性。\n\n---\n\n### 可学习的方法\n1. **方法**：将“AI Agent”开发任务拆解为“模型训练”和“Harness构建”两个独立维度。  \n   - **适用场景**：当团队试图构建可复用、可扩展的智能系统时。  \n   - **为什么有用**：避免将模型能力与环境能力混淆，明确责任边界，提升系统可维护性。\n\n2. **方法**：使用公式 `Harness = Tools + Knowledge + Observation + Action Interface + Permissions` 作为设计检查清单。  \n   - **适用场景**：设计任何需要模型与外部系统交互的智能体系统。  \n   - **为什么有用**：确保环境设计完整，避免遗漏关键能力（如权限控制、状态观察），提升系统鲁棒性。\n\n3. **方法**：在开发初期优先构建Harness原型，而非优化提示词或流程图。  \n   - **适用场景**：新项目启动阶段，或现有系统重构。  \n   - **为什么有用**：环境是智能行为的“土壤”，先构建环境可避免后期因工具缺失或权限不足导致的重构成本。\n\n4. **方法**：用“鲁布·戈德堡机械”作为反模式检查标准：若系统依赖大量串联逻辑、无容错机制、无法独立运行，则需重构为Harness结构。  \n   - **适用场景**：系统评审、代码审查、架构设计阶段。  \n   - **为什么有用**：提供可操作的判断标准，帮助识别伪智能系统。\n\n---\n\n### 可复现行动\n1. **行动**：在当前项目中，列出所有模型需要调用的外部工具、访问的知识库、需要观察的状态、可执行的动作和权限边界，按 `Harness = Tools + Knowledge + Observation + Action Interface + Permissions` 模板整理成文档。  \n   - **可执行性**：可直接在Notion或Markdown中完成，无需代码。\n\n2. **行动**：对现有“Agent”系统进行“鲁布·戈德堡机械”诊断：检查是否存在“多步骤串联、无容错、依赖特定顺序、无法独立运行”的特征，若有，则重构为模块化Harness结构。  \n   - **可执行性**：可作为团队代码审查或架构评审的检查项。\n\n3. **行动**：在新项目中，先用Python或Shell脚本搭建一个最小可行Harness（如：读取文件、调用API、记录日志、执行命令），再接入LLM模型，观察其行为是否可被环境约束和引导。  \n   - **可执行性**：可使用`subprocess`、`requests`、`os`等标准库快速实现。\n\n4. **行动**：将“心智转换：从开发Agent到开发Harness”作为团队技术分享主题，组织一次内部讨论，对比现有系统与Harness范式，输出改进路线图。  \n   - **可执行性**：适合技术团队内部学习，可结合实际项目案例。\n\n---\n\n### 局限与待核查\n1. **信息缺失**：图片中部分文字被截断（如“An”、“不可”、“漆”），无法确认完整上下文，可能影响对“训练模型”类别的具体举例理解。\n\n2. **未验证说法**：视频称“提示词水管工式 Agent 是意淫”，但未提供实证数据或对比实验，该判断属于主观批判，需结合实际项目效果验证。\n\n3. **“learn-claude-claude”未在图片中出现**：文案中提及的“learn-claude-claude”在图片中未显示，无法确认其是否为视频内容的一部分，或是否为外部推荐链接。\n\n4. **未说明Harness与Agent的耦合方式**：视频未展示模型如何与Harness交互（如API调用、状态传递、错误处理），缺乏技术实现细节，需进一步查证具体架构设计。"
+  }
+}

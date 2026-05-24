@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-05-24T16:26:32.159827+08:00",
+  "video_id": "7637313450288401716",
+  "title": "Claude 使用技巧，提升工作效率 掌握使用技巧，让你更懂claude code \n#claude使用技巧 #claudecode #AI编程 #干货分享 #抖音创作者激励计划",
+  "short_url": "https://v.douyin.com/Jy1uWwQjNh4/",
+  "status": "completed",
+  "analysis_mode": "video-first+scene-verification+ocr-fallback",
+  "coverage_stats": {
+    "original_duration_sec": 1306.734,
+    "effective_duration_sec": 600.0,
+    "duration_truncated": true,
+    "keyframe_count": 20,
+    "frame_verified_count": 0,
+    "ocr_frame_count": 90
+  },
+  "evidence_sources": {
+    "metadata": true,
+    "video_first_summary": false,
+    "frame_verification": false,
+    "ocr_text": true,
+    "learning_points": true
+  },
+  "conflict_warnings": [],
+  "numeric_or_entity_conflicts": {},
+  "quality_score": 100,
+  "fatal_errors": [],
+  "major_warnings": [],
+  "minor_warnings": [],
+  "errors": [],
+  "video_usage": {},
+  "raw": {
+    "video_first_summary": "",
+    "frame_verification": "",
+    "ocr_text": "- 抖音\n抖音号：dykx2mqph7u7\nYX studio\nClaude code 由浅入深\n掌握使用技巧，提高工作效率\n学习篇 第五期 下\n- Claude code 由浅入深\n掌握使用技巧，提高工作效率\n学习篇 第五期 下\n抖音\n抖音号: dykx2mqph7u7\nYX studio\n- 聊天机器人 vs Claude Code\n普通 AI 聊天工具\n你问\n它答\n你写代码\nClaude Code\n你描述需求\n它读代码\n它写代码\n它验证\n从执行者到导演\n抖音\n抖音号: dykx2mqph7u7\nYX studio\n- Claude Code 的四项核心能力\n读取文件\n理解你的整个项目结构\n运行命令\n构建、测试、部署、Git 操作\n修改代码\n不只是建议，直接动手改\n自主迭代\n发现问题→修复→验证，直到完成\n抖音\n抖音号: dykx2mqph7u7\nYX studio\n- 最核心的约束：上下文窗口\n78%\n每次对话\n每次读文件\n每次命令输出\n都在消耗上下文\n一次调试可能消耗数万 token\n窗口满了→忘记早期指令、犯更多错误\n上下文窗口是你最需要管理的资源\n抖音\n抖音号：dykx2mqph7u7\nYX studio\n- 不给 Claude 验证手段 = 你是唯一的质检员\n1\nClaude\n写代码\n2\n看起来\n没问题\n3\n直接用了\n4\n出 Bug\n5\n你发现\n6\n你告诉\nClaude\n7\n又出其他\n问题\n这是你能做的回报最高的一件事 —— 让 Claude 自我验证\n抖音\n抖音号: dykx2mqph7u7\nQ YX studio\n- 好的验证 vs 不好的验证\n策略\nX 不好\n✓ 好\n提供验证标准\n实现一个验证邮箱的函数\n写 validateEmail，测试用例：\na@b.com→true，invalid→false，\n实现后运行测试\n可视化验证UI\n让仪表盘更好看\n粘贴截图，实现设计，截图对比，\n列出差异并修复\n解决根因\n构建失败了\n构建报错：粘贴错误。\n修复根因，不要压制错误\n抖音\n抖音号：dykx2mqph7u7\nQ YX studio\n- 好的验证 vs 不好的验证\n策略\nX 不好\n✓ 好\n提供验证标准\n实现一个验证邮箱的函数\n写 validateEmail，测试用例：\na@b.com→true，invalid→false，\n实现后运行测试\n可视化验证UI\n让仪表盘更好看\n粘贴截图，实现设计，截图对比，\n列出差异并修复\n解决根因\n构建失败了\n构建报错：粘贴错误。\n修复根因，不要压制错误\n抖音\n抖音号：dykx2mqph7u7\nYX studio\n- 好的验证 vs 不好的验证\n策略\n不好\n好\n提供验证标准\n实现一个验证邮箱的函数\n写 validateEmail，测试用例：\na@b.com→true，invalid→false，\n实现后运行测试\n可视化验证UI\n让仪表盘更好看\n粘贴截图，实现设计，截图对比，\n列出差异并修复\n解决根因\n构建失败了\n构建报错：粘贴错误。\n修复根因，不要压制错误\n抖音\n抖音号：dykx2mqph7u7\nYX studio",
+    "ocr_compact": "- 抖音\n抖音号：dykx2mqph7u7\nYX studio\nClaude code 由浅入深\n掌握使用技巧，提高工作效率\n学习篇 第五期 下\n- Claude code 由浅入深\n抖音\n抖音号: dykx2mqph7u7\n- 聊天机器人 vs Claude Code\n普通 AI 聊天工具\n你问\n它答\n你写代码\nClaude Code\n你描述需求\n它读代码\n它写代码\n它验证\n从执行者到导演\n- Claude Code 的四项核心能力\n读取文件\n理解你的整个项目结构\n运行命令\n构建、测试、部署、Git 操作\n修改代码\n不只是建议，直接动手改\n自主迭代\n发现问题→修复→验证，直到完成\n- 最核心的约束：上下文窗口\n78%\n每次对话\n每次读文件\n每次命令输出\n都在消耗上下文\n一次调试可能消耗数万 token\n窗口满了→忘记早期指令、犯更多错误\n上下文窗口是你最需要管理的资源\n- 不给 Claude 验证手段 = 你是唯一的质检员\n1\nClaude\n写代码\n2\n看起来\n没问题\n3\n直接用了\n4\n出 Bug\n5\n你发现\n6\n你告诉\n7\n又出其他\n问题\n这是你能做的回报最高的一件事 —— 让 Claude 自我验证\nQ YX studio\n- 好的验证 vs 不好的验证\n策略\nX 不好\n✓ 好\n提供验证标准\n实现一个验证邮箱的函数\n写 validateEmail，测试用例：\na@b.com→true，invalid→false，\n实现后运行测试\n可视化验证UI\n让仪表盘更好看\n粘贴截图，实现设计，截图对比，\n列出差异并修复\n解决根因\n构建失败了\n构建报错：粘贴错误。\n修复根因，不要压制错误\n不好\n好",
+    "learning_points": "### 核心思想\n- 视频主张：**将 Claude Code 从“被动执行者”升级为“主动工程师”，通过系统性地设计验证机制、管理上下文资源、使用高级工作流（如扇出、自动模式）和核心命令，实现高效、可靠、可复用的 AI 编程协作。**\n- 它试图改变观众对 AI 编程工具的“问答式”使用习惯，转向一种**以工程化思维驱动的、可验证、可控制、可扩展的 AI 协作范式**。\n\n---\n\n### 证据链\n1. **证据：帧3中“把 Claude 当高级工程师 —— 直接问” + 对话气泡“日志系统怎么工作的？” + 帧4中“大功能的神级流程：让 Claude 面试你”**  \n   → 推出结论：视频强调不应将 Claude 当作“代码生成器”，而应作为“高级工程师”进行提问和交互，通过“面试”等高阶交互方式激发其深层理解与系统性思考。\n\n2. **证据：帧3中表格将“必须零例外执行”与“Hooks”、“MCP”、“Subagents”等机制对应，帧6中“扇出模式 + 自动模式”流程图**  \n   → 推出结论：视频明确区分了不同机制的适用场景（如 Hooks 用于强制执行、MCP 用于服务器控制、扇出用于并行任务），说明其核心是**通过结构化机制控制 AI 行为边界**。\n\n3. **证据：帧5中“claude -p —— 非交互模式” + 代码块展示命令行指令，帧7中“Claude Code 核心命令”速查表**  \n   → 推出结论：视频强调**命令行模式和核心命令是实现自动化、非交互式工作流的关键**，这是从“聊天式”转向“工程化”使用的重要工具。\n\n4. **证据：帧3中“不给 Claude 验证手段 = 你是唯一的质检员” + 帧3中“好的验证 vs 不好的验证”对比表**  \n   → 推出结论：视频明确指出**验证是提升 AI 输出可靠性的核心环节**，并提供具体策略（如提供测试用例、截图对比、修复根因），而非依赖人工事后纠错。\n\n5. **证据：帧1中“六种方式扩展 Claude Code 的能力” + 帧2中“Skills / Subagents / 插件”卡片 + 帧6中“扇出模式 + 自动模式”**  \n   → 推出结论：视频构建了一个**能力扩展框架**，从基础技能（Skills）到高级架构（Subagents、MCP、Hooks），再到工作流模式（扇出、自动），形成一个可进阶的使用体系。\n\n6. **证据：帧3中“最核心的约束：上下文窗口” + “一次调试可能消耗数万 token” + “窗口满了→忘记早期指令”**  \n   → 推出结论：视频将**上下文管理视为使用 Claude Code 的核心挑战**，并指出其对任务连续性和准确性的影响，强调必须主动管理上下文资源。\n\n---\n\n### 可学习的方法\n1. **方法：构建“验证闭环”机制**  \n   - 适用场景：任何需要 AI 生成代码或执行任务的场景，尤其是高风险或复杂逻辑任务。  \n   - 为什么有用：通过提供明确的验证标准（如测试用例、截图对比、错误日志分析），可显著降低 AI 输出错误率，减少人工返工。\n\n2. **方法：使用“非交互模式”（claude -p）执行自动化任务**  \n   - 适用场景：批量处理、CI/CD 脚本、定时任务、无需人工干预的代码生成。  \n   - 为什么有用：避免聊天界面的上下文累积和交互延迟，提升执行效率和可复用性。\n\n3. **方法：设计“扇出 + 自动模式”工作流**  \n   - 适用场景：并行处理多个子任务（如多个文件修改、多模块测试）、需要自动决策的流程（如构建失败自动修复）。  \n   - 为什么有用：通过并行化和自动化，实现任务吞吐量提升和错误自动拦截。\n\n4. **方法：将 Claude 当作“高级工程师”进行“面试式”提问**  \n   - 适用场景：复杂系统设计、架构讨论、根因分析。  \n   - 为什么有用：通过结构化提问（如“请解释日志系统的工作原理”），激发 AI 的系统性思考，而非简单代码生成。\n\n5. **方法：使用“核心命令”管理会话与工作流**  \n   - 适用场景：多任务并行、上下文切换、任务重启、状态保存。  \n   - 为什么有用：通过命令行指令（如 `claude -p`、`claude -r`）实现精确控制，避免聊天界面的模糊性和不可控性。\n\n6. **方法：主动管理上下文窗口资源**  \n   - 适用场景：长周期调试、多文件项目、复杂逻辑推理。  \n   - 为什么有用：通过分段处理、摘要重载、关键信息前置，避免上下文溢出导致的遗忘和错误。\n\n---\n\n### 可复现行动\n1. **行动：为一个函数生成任务，提供明确的验证标准**  \n   - 任务：让 Claude 实现 `validateEmail` 函数，并提供测试用例：`a@b.com → true`, `invalid → false`，要求运行测试并输出结果。  \n   - 可复现方式：在 Claude Code 中输入：“实现一个邮箱验证函数，测试用例：a@b.com→true，invalid→false，运行测试并报告结果。”\n\n2. **行动：使用非交互模式执行一个简单命令**  \n   - 任务：在命令行运行 `claude -p \"列出当前目录下所有 .py 文件\"`。  \n   - 可复现方式：在支持 CLI 的 Claude Code 环境中执行该命令，观察输出是否符合预期。\n\n3. **行动：设计一个“扇出模式”任务**  \n   - 任务：让 Claude 同时修改三个文件（如 `config.py`, `utils.py`, `main.py`），每个文件添加一个日志记录语句。  \n   - 可复现方式：在 Claude Code 中输入：“请并行修改以下三个文件：config.py、utils.py、main.py，每个文件添加一行 `print('debug')`，完成后报告修改结果。”\n\n4. **行动：模拟“面试式”提问**  \n   - 任务：问 Claude：“请解释日志系统的工作原理，包括日志级别、输出格式、存储方式和常见问题。”  \n   - 可复现方式：在聊天界面输入该问题，观察其回答是否系统、结构化。\n\n5. **行动：使用核心命令管理会话**  \n   - 任务：使用 `claude -r` 重启一个会话，或使用 `claude -s` 保存当前状态。  \n   - 可复现方式：在支持命令行的环境中执行这些命令，验证会话状态是否被正确管理。\n\n---\n\n### 局限与待核查\n1. **缺少音频/语音内容**：所有分析基于视觉和 OCR 文字，未包含语音讲解，可能遗漏关键解释或强调点。\n2. **未展示实际运行效果**：帧中多为演示文稿，未展示实际代码执行、命令行输出或验证结果，无法确认方法是否真正有效。\n3. **“Claude Code”具体实现环境不明**：未说明是使用 Anthropic 官方工具、第三方平台（如 Replit、GitHub Copilot）还是自建系统，影响方法复现性。\n4. **“MCP 服务器”、“Hooks”等机制未展开**：虽然列出，但未提供具体配置、代码示例或调用方式，需进一步查证其技术实现。\n5. **“上下文窗口”具体数值未说明**：虽强调其重要性，但未给出 Claude Code 的实际上下文长度（如 200K token），影响资源管理策略的精确性。"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-05-24T16:32:38.745704+08:00",
+  "video_id": "7632756942163955634",
+  "title": "怎么才算找到自己#claude",
+  "short_url": "https://v.douyin.com/ljGlZCkNm0E/\\",
+  "status": "completed",
+  "analysis_mode": "image-post+vision-analysis",
+  "coverage_stats": {
+    "original_duration_sec": 0.0,
+    "effective_duration_sec": 0.0,
+    "duration_truncated": false,
+    "keyframe_count": 4,
+    "frame_verified_count": 4,
+    "ocr_frame_count": 0
+  },
+  "evidence_sources": {
+    "metadata": true,
+    "video_first_summary": true,
+    "frame_verification": false,
+    "ocr_text": false,
+    "learning_points": true
+  },
+  "conflict_warnings": [],
+  "numeric_or_entity_conflicts": {},
+  "quality_score": 100,
+  "fatal_errors": [],
+  "major_warnings": [],
+  "minor_warnings": [],
+  "errors": [],
+  "video_usage": {},
+  "raw": {
+    "video_first_summary": "（video-first 视觉模型调用失败）",
+    "frame_verification": "",
+    "ocr_text": "（未提取到 OCR 帧）",
+    "ocr_compact": "（未提取到 OCR 帧）",
+    "learning_points": "### 核心思想\n- 视频主张：通过将个人的沟通风格、工作习惯、性格特征等“蒸馏”为可运行的AI Skill（如“自己.skill”），实现一种**可复用、可部署、保留个人边界感的自动化助手**，从而解决重复性沟通、风格不一致、效率低下的问题。\n- 它试图改变观众对“AI助手=通用工具”的理解，转向“AI助手=个性化人格代理”的新范式——即AI不仅是工具，更是“另一个自己”的延伸，能以“你”的方式工作，但不会越权。\n\n---\n\n### 证据链\n1. **证据**：图1 README文档中明确写道：“如果总有一天你要把自己交接给未来的自己，不如先把自己蒸馏成一个可运行的 Skill。”  \n   → **结论**：视频的核心不是“用AI做任务”，而是“将自我结构化为可运行的AI实体”，强调“自我交接”和“人格延续”的哲学意图。\n\n2. **证据**：图1中列出问题：“你接需求、写方案、催进度、回老板、回客户，其实都有固定套路？”  \n   → **结论**：视频针对的是**重复性、模式化的人际沟通场景**，而非通用编程或数据分析任务，目标是“自动化你的沟通风格”。\n\n3. **证据**：图3中`persona.md`文件包含“保留‘贵州小孩’的气息：不晓得、劳资、得意、安”等方言词汇，以及“97%无标点，一句话就是一条消息”等风格规则。  \n   → **结论**：AI Skill的构建不仅包含身份信息，更包含**语言风格、情绪表达、地域文化特征**，强调“像你”而非“像AI”。\n\n4. **证据**：图3中`meta.json`文件包含`memory_sources`字段，指向“C:/Users/23925/Downloads/texts”和“R:/texet/texts”两个路径，共36个聊天文件。  \n   → **结论**：AI Skill的训练数据来自**真实聊天记录**，而非虚构或通用语料，说明其“个性化”是基于真实行为数据的。\n\n5. **证据**：图3中`meta.json`包含`corrections_count: 0`和“Do you want to create meta.json?”的交互提示。  \n   → **结论**：系统支持**动态修正和版本控制**，暗示该Skill是可迭代、可维护的工程化产物，而非一次性生成。\n\n6. **证据**：图4显示Claude Code终端界面，用户输入“你好”，AI回复“你好！有什么我可以帮你的吗？”，且界面显示“Sonnet 4.6 · Claude Pro”，说明该Skill运行在**Claude Code环境**中。  \n   → **结论**：该Skill是**可部署在Claude Code平台上的实际运行体**，而非概念或PPT，具备可执行性。\n\n---\n\n### 可学习的方法\n1. **方法**：将个人沟通风格结构化为“Layer 0: 硬性规则”和“Layer 1: 说话风格”两层框架。  \n   - **适用场景**：需要构建个性化AI助手的个人或团队，尤其是高频沟通岗位（如产品经理、客服、项目经理）。  \n   - **为什么有用**：分层设计避免AI越权（Layer 0）同时保留个性（Layer 1），实现“像你但不越界”。\n\n2. **方法**：使用真实聊天记录（JSONL格式）作为训练数据源，通过路径指定`memory_sources`字段。  \n   - **适用场景**：任何希望AI模仿真实沟通行为的场景，如客服话术、邮件回复、团队协作。  \n   - **为什么有用**：基于真实数据训练，避免“AI腔调”，提升可信度和一致性。\n\n3. **方法**：在`meta.json`中定义`tags`字段，如“直接”“行动派”“轻微社恐”“贵州小孩”，用于标签化人格特征。  \n   - **适用场景**：需要快速向他人或系统描述AI人格特征的场景，如团队协作、产品文档。  \n   - **为什么有用**：标签化便于快速理解、分类、检索和调整AI行为，提升协作效率。\n\n4. **方法**：在`persona.md`中明确禁止AI“写长段分析”“用书面语”，并保留方言词汇。  \n   - **适用场景**：希望AI保持“非正式、口语化、有棱角”的沟通风格的用户。  \n   - **为什么有用**：防止AI“过度优化”导致风格失真，保持与真实人格的一致性。\n\n5. **方法**：通过`claude login`命令登录Claude Code，运行`/init`创建`CLAUDE.md`指令文件。  \n   - **适用场景**：在本地环境部署个性化AI Skill的开发者或高级用户。  \n   - **为什么有用**：提供标准化工作流，降低部署门槛，确保环境一致性。\n\n---\n\n### 可复现行动\n1. **行动**：收集自己过去3个月的聊天记录（微信、QQ、邮件等），导出为JSONL格式，存入`texts/`目录。  \n   - **可执行**：使用微信PC版导出聊天记录，或通过第三方工具（如WeChatExporter）转为JSONL。\n\n2. **行动**：创建`persona.md`文件，按视频结构写入“Layer 0: 硬性规则”和“Layer 1: 说话风格”，加入个人方言、口头禅、沟通禁忌。  \n   - **可执行**：用Markdown编辑器（如Typora）编写，参考视频中的“不写长段分析、不用书面语”等规则。\n\n3. **行动**：创建`meta.json`文件，填写`name`、`profile`、`tags`、`memory_sources`字段，指向本地聊天数据路径。  \n   - **可执行**：用VS Code或EmEditor编辑JSON，确保路径正确，字段完整。\n\n4. **行动**：在Claude Code终端运行`claude login`，登录后执行`/init`，创建`CLAUDE.md`，然后加载`自己.skill`。  \n   - **可执行**：确保已安装Claude Code，按提示操作，验证AI是否能以你的风格回复。\n\n5. **行动**：测试AI回复，记录`corrections_count`，根据反馈调整`persona.md`和`meta.json`，迭代优化。  \n   - **可执行**：在终端输入“你好”“帮我写个方案”等指令，观察回复是否符合预期，记录修改点。\n\n---\n\n### 局限与待核查\n1. **局限**：视频未展示AI Skill在实际工作场景中的完整交互流程（如处理复杂任务、多轮对话、上下文记忆），仅展示“你好”回复，无法验证其鲁棒性。\n\n2. **待核查**：`memory_sources`字段中提到“36个聊天文件”，但图2仅显示“已选择2个项目”，未明确是否全部导入，需确认数据是否完整加载。\n\n3. **待核查**：`persona.md`中“不主动表明自己是AI”是否在实际运行中被严格遵守？视频未展示AI在被追问身份时的反应。\n\n4. **局限**：未说明“自己.skill”是否支持多用户、多设备同步，或是否可部署在非Claude Code平台（如Web端、手机端），限制了其通用性。\n\n5. **待核查**：视频中“2026年4月26日”的修改时间是否为虚构或未来日期？需确认是否为实际数据或演示用假数据。"
+  }
+}
